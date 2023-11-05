@@ -1,17 +1,15 @@
 from datetime import datetime
-from concurrent.futures import ProcessPoolExecutor
 import socket
 import time
+import asyncio
 
 SERVER_HOST = ''
 SERVER_PORT = 9734
 LOG_FILE_NAME = 'server_log.txt'
 RUNTIME = 1
 
-def timer(sec = RUNTIME):
-    wait = time.perf_counter() + sec
-    while time.perf_counter() < wait:
-        pass
+async def timer(sec=RUNTIME):
+    await asyncio.sleep(sec)
 
 def get_time():
     return datetime.now().strftime('%a %b %Y, %H:%M:%S')
@@ -32,11 +30,12 @@ def log_recv(log_file, recv_msg):
     time = get_time()
     log_file.write(f'{time}: Client 1: {recv_msg}\n')
 
-def handle_client(client_sock, client_addr, log_file):
+async def handle_client(client_sock, client_addr, log_file):
     log_connection(log_file, client_addr)
 
     while True:
-        dataFromClient = client_sock.recv(1024).decode()
+        dataFromClient = await loop.sock_recv(client_sock, 1024)
+        dataFromClient = dataFromClient.decode()
         if not dataFromClient:
             break
         timer()
@@ -46,25 +45,26 @@ def handle_client(client_sock, client_addr, log_file):
         data = f'{dataMirrored} {dataFromClient}'
 
         timer()
-        client_sock.send(data.encode())
+        await loop.sock_sendall(client_sock, data.encode())
         log_send(log_file, data)
-
+    
     client_sock.close()
     log_disconnection(log_file, client_addr)
 
-def main():
+async def main():
     log_file = open(LOG_FILE_NAME, 'w')
 
     server_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     server_sock.bind((SERVER_HOST, SERVER_PORT))
     server_sock.listen()
+    server_sock.setblocking(False)
 
-    with ProcessPoolExecutor() as pool:
-        client_sock, client_addr = server_sock.accept()
-        pool.submit(handle_client, client_sock, client_addr, log_file)
+    while True:
+        client_sock, client_addr = await loop.sock_accept(server_sock)
+        loop.create_task(handle_client(client_sock, client_addr, log_file))
 
-    server_sock.close()
-    log_file.close()
 
 if __name__ == '__main__':
-    main()
+    loop = asyncio.get_event_loop()
+    loop.run_until_complete(main())
+    loop.close
