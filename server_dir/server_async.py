@@ -1,12 +1,11 @@
 from datetime import datetime
 import socket
-import time
 import asyncio
 
 SERVER_HOST = ''
 SERVER_PORT = 9734
-LOG_FILE_NAME = 'server_log.txt'
-RUNTIME = 1
+LOG_FILE_NAME = './server_dir/server_log.log'
+RUNTIME = 10
 
 async def timer(sec=RUNTIME):
     await asyncio.sleep(sec)
@@ -26,9 +25,9 @@ def log_send(log_file, send_msg):
     time = get_time()
     log_file.write(f'{time}: {send_msg}\n')
 
-def log_recv(log_file, recv_msg):
+def log_recv(log_file, recv_msg, addr):
     time = get_time()
-    log_file.write(f'{time}: Client 1: {recv_msg}\n')
+    log_file.write(f'{time}: Client {addr}: {recv_msg}\n')
 
 async def handle_client(client_sock, client_addr, log_file):
     log_connection(log_file, client_addr)
@@ -38,13 +37,13 @@ async def handle_client(client_sock, client_addr, log_file):
         dataFromClient = dataFromClient.decode()
         if not dataFromClient:
             break
-        timer()
-        log_recv(log_file, dataFromClient)
+        await timer()
+        log_recv(log_file, dataFromClient, client_addr)
 
         dataMirrored = dataFromClient[::-1]
-        data = f'{dataMirrored} {dataFromClient}'
+        data = f'{dataMirrored} Сервер написал Савенков И.В. М3О-419Бк-20'
 
-        timer()
+        await timer()
         await loop.sock_sendall(client_sock, data.encode())
         log_send(log_file, data)
     
@@ -52,7 +51,7 @@ async def handle_client(client_sock, client_addr, log_file):
     log_disconnection(log_file, client_addr)
 
 async def main():
-    log_file = open(LOG_FILE_NAME, 'w')
+    log_file = open(LOG_FILE_NAME, 'a')
 
     server_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     server_sock.bind((SERVER_HOST, SERVER_PORT))

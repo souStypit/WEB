@@ -9,8 +9,8 @@
 #include <time.h>
 
 #define CONFIG_FILE_NAME "config.txt"
-#define LOG_FILE_NAME "client_log.txt"
-#define RUNTIME 1
+#define LOG_FILE_NAME "client_log.log"
+#define RUNTIME 20
 
 void handle_config(char (*serv_ip)[32], int *serv_port) {
     char buffer_port[8];
@@ -97,7 +97,7 @@ int main() {
     log_connection(log_file, server_ip);
     timer(RUNTIME);
 
-    char message[] = "Савенков И.В., М3О-419Бк-20";
+    char message[] = "Савенков И.В., М3О-419Бк-20.";
     write(sockfd, message, sizeof(message) - 1);
     log_send(log_file, message);
 
